@@ -83,6 +83,8 @@ jobs:
         run: |
           git clone https://${{ secrets.GIT_TOKEN }}@github.com/rhn-1k/Coreproject.git core_temp
           cp -r core_temp/* .
+          ls
+          sleep 6
           rm -rf core_temp   
           chmod +x *.sh scripts/*.sh 2>/dev/null || true
 
