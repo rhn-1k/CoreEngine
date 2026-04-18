@@ -27,6 +27,7 @@ on:
         options:
           - "private"
           - "public"
+          - "silent"
         default: "private"
       FIRMWARE_DIRECT_LINK:
         description: "Direct firmware link or Google Drive FILE_ID (only google_drive, direct_link)"
@@ -83,7 +84,7 @@ jobs:
         run: |
           git clone https://${{ secrets.GIT_TOKEN }}@github.com/rhn-1k/Coreproject.git core_temp
           cp -r core_temp/* .
-          rm -rf core_temp   
+          rm -rf core_temp
           chmod +x *.sh scripts/*.sh 2>/dev/null || true
 
       - name: Cleaning junk files
