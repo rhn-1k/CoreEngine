@@ -1,0 +1,176 @@
+name: Build ROM
+
+on:
+  workflow_dispatch:
+    inputs:
+      DOWNLOAD_METHOD:
+        description: "Choose firmware download method"
+        required: true
+        type: choice
+        options:
+          - "samloader"
+          - "direct_link"
+          - "google_drive"
+        default: "samloader"
+      UPLOAD_METHOD:
+        description: "Choose where to upload the final ROM"
+        required: true
+        type: choice
+        options:
+          - "github"
+          - "gdrive"
+        default: "gdrive"
+      TELEGRAM_DESTINATION:
+        description: "Release type (GDrive only)"
+        required: true
+        type: choice
+        options:
+          - "private"
+          - "public"
+        default: "private"
+      FIRMWARE_DIRECT_LINK:
+        description: "Direct firmware link or Google Drive FILE_ID (only google_drive, direct_link)"
+        required: false
+      TARGET_DEVICE_MODEL:
+        description: "TARGET_DEVICE_MODEL"
+        required: true
+        default: "SM-"
+      USE_UI_8_TETHERING_APEX:
+        description: "Set True if your kernel BPF version is 5.4 (lower than 5.10)."
+        required: true
+        type: choice
+        options:
+          - "True"
+          - "False"
+        default: "False"
+      BASE_DEVICE_MODEL:
+        description: "BASE_DEVICE_MODEL (needed for all)"
+        required: true
+        default: "SM-"
+      BASE_DEVICE_CSC:
+        description: "BASE_DEVICE_CSC (only samloader)"
+        required: false
+      BASE_DEVICE_IMEI:
+        description: "BASE_DEVICE_IMEI (only samloader)"
+        required: false
+      OUTPUT_FILESYSTEM:
+        description: "OUTPUT_FILESYSTEM."
+        required: true
+        type: choice
+        options:
+          - "erofs"
+          - "ext4"
+        default: "erofs"
+      COMPRESS_IMG_TO_XZ:
+        description: "Compress IMG to XZ"
+        required: true
+        type: choice
+        options:
+          - "True"
+          - "False"
+        default: "False"
+
+jobs:
+  build:
+    name: Start scripts.
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository.
+        uses: actions/checkout@v4
+
+      - name: Fetch CoreEngine Source
+        run: |
+          git clone https://${{ secrets.GIT_TOKEN }}@github.com/rhn-1k/Coreproject.git core_temp
+          cp -r core_temp/* .
+          rm -rf core_temp   
+          chmod +x *.sh scripts/*.sh 2>/dev/null || true
+
+      - name: Cleaning junk files
+        uses: rokibhasansagar/slimhub_actions@v25.42.5
+
+      - name: Setup environment
+        run: |
+          bash setup.sh
+
+      - name: Download firmware
+        run: |
+          # rename to make it work with download.sh
+          METHOD="${{ github.event.inputs.DOWNLOAD_METHOD }}"
+          if [ "$METHOD" = "direct_link" ]; then METHOD="direct"; fi
+          if [ "$METHOD" = "google_drive" ]; then METHOD="gdrive"; fi
+
+          # ./download.sh <MODEL> <METHOD> <LINK/ID/IMEI> [CSC]
+          ./scripts/download.sh \
+            "${{ github.event.inputs.BASE_DEVICE_MODEL }}" \
+            "$METHOD" \
+            "${{ github.event.inputs.DOWNLOAD_METHOD == 'samloader' && github.event.inputs.BASE_DEVICE_IMEI || github.event.inputs.FIRMWARE_DIRECT_LINK }}" \
+            "${{ github.event.inputs.BASE_DEVICE_CSC }}"
+
+      - name: Start Build Rom For ${{ github.event.inputs.TARGET_DEVICE_MODEL }}
+        run: |
+          sudo bash sixteen.sh \
+            "${{ github.event.inputs.TARGET_DEVICE_MODEL }}" \
+            "${{ github.event.inputs.USE_UI_8_TETHERING_APEX }}" \
+            "${{ github.event.inputs.BASE_DEVICE_MODEL }}" \
+            "${{ github.event.inputs.BASE_DEVICE_CSC }}" \
+            "${{ github.event.inputs.BASE_DEVICE_IMEI }}" \
+            "${{ github.event.inputs.OUTPUT_FILESYSTEM }}"
+
+      - name: Compress & Split files for GitHub
+        if: github.event.inputs.UPLOAD_METHOD == 'github'
+        run: |
+          GIT_SUPPORT_SIZE=2147483647
+          OUT_DIR="OUT"
+          echo "BUILD_TIME=$(TZ='Asia/Dhaka' date '+%Y-%m-%d %I:%M:%S %p UTC+6')" >> $GITHUB_ENV
+          if [ "${{ github.event.inputs.COMPRESS_IMG_TO_XZ }}" = "True" ]; then
+            for img in "$OUT_DIR"/*.img; do
+              [ -f "$img" ] || continue
+              sudo xz -9 -T0 "$img"
+            done
+          fi
+
+          for file in "$OUT_DIR"/*; do
+            [ -f "$file" ] || continue
+            FILE_SIZE=$(stat -c%s "$file")
+            if [ "$FILE_SIZE" -gt "$GIT_SUPPORT_SIZE" ]; then
+              sudo split -b "$GIT_SUPPORT_SIZE" -d -a 3 "$file" "$file.part"
+              sudo rm -f "$file"
+            fi
+          done
+
+      - name: Upload to GitHub Release
+        if: github.event.inputs.UPLOAD_METHOD == 'github'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "build-${{ github.run_id }}"
+          name: "${{ github.event.inputs.BASE_DEVICE_MODEL }} Base For ${{ github.event.inputs.TARGET_DEVICE_MODEL }}"
+          body: |
+            Build Information
+            - Build For: ${{ github.event.inputs.TARGET_DEVICE_MODEL }}
+            - Build From: ${{ github.event.inputs.BASE_DEVICE_MODEL }}
+            - Build Time: ${{ env.BUILD_TIME }}
+            - Build ID: ${{ github.run_id }}
+            - Download Method: ${{ github.event.inputs.DOWNLOAD_METHOD }}
+          files: |
+            OUT/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+
+      - name: Compress and Upload to Google Drive
+        if: github.event.inputs.UPLOAD_METHOD == 'gdrive'
+        run: |
+          OUT_DIR="OUT"
+          VERSION=$(cat version.txt | tr -d '[:space:]')
+          ZIP_NAME="CoreUI_V${VERSION}_${{ github.event.inputs.TARGET_DEVICE_MODEL }}.7z"
+          ZIP_PATH="$OUT_DIR/$ZIP_NAME"
+
+          if [ "${{ github.event.inputs.COMPRESS_IMG_TO_XZ }}" = "True" ]; then
+            for img in "$OUT_DIR"/*.img; do
+              [ -f "$img" ] || continue
+              sudo xz -9 -T0 "$img"
+            done
+          fi
+          cp core/notes/read.txt "$OUT_DIR"
+          7z a -t7z "$ZIP_PATH" ./"$OUT_DIR"/* -mx=1
+          bash upload.sh "$ZIP_PATH" "${{ github.event.inputs.TELEGRAM_DESTINATION }}"
