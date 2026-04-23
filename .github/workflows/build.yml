@@ -101,8 +101,8 @@ jobs:
           if [ "$METHOD" = "direct_link" ]; then METHOD="direct"; fi
           if [ "$METHOD" = "google_drive" ]; then METHOD="gdrive"; fi
 
-          # ./download.sh <MODEL> <METHOD> <LINK/ID/IMEI> [CSC]
-          ./scripts/download.sh \
+          # bash download.sh <MODEL> <METHOD> <LINK/ID/IMEI> [CSC]
+          bash scripts/download.sh \
             "${{ github.event.inputs.BASE_DEVICE_MODEL }}" \
             "$METHOD" \
             "${{ github.event.inputs.DOWNLOAD_METHOD == 'samloader' && github.event.inputs.BASE_DEVICE_IMEI || github.event.inputs.FIRMWARE_DIRECT_LINK }}" \
