@@ -172,6 +172,7 @@ jobs:
               sudo xz -9 -T0 "$img"
             done
           fi
-          cp core/notes/read.txt "$OUT_DIR"
+          cp core/etc/read.txt "$OUT_DIR"
+          cp core/etc/optics.img "$OUT_DIR"
           7z a -t7z "$ZIP_PATH" ./"$OUT_DIR"/* -mx=1
           bash upload.sh "$ZIP_PATH" "${{ github.event.inputs.TELEGRAM_DESTINATION }}"
