@@ -163,7 +163,7 @@ jobs:
         run: |
           OUT_DIR="OUT"
           VERSION=$(cat version.txt | tr -d '[:space:]')
-          ZIP_NAME="CoreUI_V${VERSION}_${{ github.event.inputs.TARGET_DEVICE_MODEL }}.7z"
+          ZIP_NAME="CoreProject_V${VERSION}_${{ github.event.inputs.TARGET_DEVICE_MODEL }}.7z"
           ZIP_PATH="$OUT_DIR/$ZIP_NAME"
 
           if [ "${{ github.event.inputs.COMPRESS_IMG_TO_XZ }}" = "True" ]; then
@@ -173,6 +173,5 @@ jobs:
             done
           fi
           cp core/etc/read.txt "$OUT_DIR"
-          cp core/etc/optics.img "$OUT_DIR"
           7z a -t7z "$ZIP_PATH" ./"$OUT_DIR"/* -mx=1
           bash upload.sh "$ZIP_PATH" "${{ github.event.inputs.TELEGRAM_DESTINATION }}"
