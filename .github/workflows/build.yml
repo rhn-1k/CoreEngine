@@ -29,15 +29,6 @@ on:
           - "public"
           - "silent"
         default: "private"
-      UI_TYPE:
-        description: "CoreU type"
-        required: true
-        type: choice
-        options:
-          - "slim"
-          - "full"
-        default: "slim"
-
       FIRMWARE_DIRECT_LINK:
         description: "Direct firmware link or Google Drive FILE_ID (only google_drive, direct_link)"
         required: false
@@ -171,18 +162,9 @@ jobs:
         if: github.event.inputs.UPLOAD_METHOD == 'gdrive'
         run: |
           OUT_DIR="OUT"
-          VERSION=$(cat version.txt | cut -d',' -f1 | tr -d '[:space:]')
-          TARGET="${{ github.event.inputs.TARGET_DEVICE_MODEL }}"
-          ZIP_NAME="CoreProject_V${VERSION}_${TARGET}.7z"
+          VERSION=$(cat version.txt | tr -d '[:space:]')
+          ZIP_NAME="CoreProject_V${VERSION}_${{ github.event.inputs.TARGET_DEVICE_MODEL }}.7z"
           ZIP_PATH="$OUT_DIR/$ZIP_NAME"
-          # A155X = 4g, A156X = 5g
-          if [[ "$TARGET" == *"A155"* ]]; then
-            NET_TYPE="4g"
-          elif [[ "$TARGET" == *"A156"* ]]; then
-            NET_TYPE="5g"
-          else
-            NET_TYPE="4g" 
-          fi
 
           if [ "${{ github.event.inputs.COMPRESS_IMG_TO_XZ }}" = "True" ]; then
             for img in "$OUT_DIR"/*.img; do
@@ -192,4 +174,4 @@ jobs:
           fi
           cp core/etc/read.txt "$OUT_DIR"
           7z a -t7z "$ZIP_PATH" ./"$OUT_DIR"/* -mx=1
-          bash upload.sh "$ZIP_PATH" "${{ github.event.inputs.TELEGRAM_DESTINATION }}" "${{ github.event.inputs.UI_TYPE }}" "$NET_TYPE"
+          bash upload.sh "$ZIP_PATH" "${{ github.event.inputs.TELEGRAM_DESTINATION }}"
