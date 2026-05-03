@@ -23,12 +23,6 @@ jobs:
         run: |
           VERSION_FILE="version.txt"
           JSON_OUT="core/etc/web/data/version.json"
-          
-          if [ ! -f "$VERSION_FILE" ]; then
-              echo "ERROR: version.txt not found."
-              exit 1
-          fi
-
           IFS=',' read -r V_CORE V_ONE V_ANDROID < "$VERSION_FILE"
           
           V_CORE=$(echo $V_CORE | xargs)
