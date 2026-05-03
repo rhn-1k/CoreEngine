@@ -1,4 +1,4 @@
-name: Sync Version to Web
+name: Sync Version to Private Repo
 
 on:
   workflow_dispatch:
@@ -7,39 +7,29 @@ on:
       - 'version.txt'
 
 jobs:
-  update-version:
+  update-private-repo:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Fetch CoreEngine Source
+      - name: Update and Push to Private Repo
         run: |
-          git clone https://${{ secrets.GIT_TOKEN }}@github.com/rhn-1k/Coreproject.git core_temp
-          rm -rf core_temp/.git
-          cp -ra core_temp/. .
-          rm -rf core_temp
-          chmod +x *.sh scripts/*.sh 2>/dev/null || true
+          git clone https://${{ secrets.GIT_TOKEN }}@github.com/rhn-1k/Coreproject.git private_repo
+          cp version.txt private_repo/
+          cd private_repo
 
-      - name: Generate Version JSON
-        run: |
-          if [ -f "gen_version.sh" ]; then
-              bash gen_version.sh
-          else
-              echo "ERROR: gen_version.sh not found."
-              exit 1
-          fi
+          chmod +x gen_version.sh
+          bash gen_version.sh
 
-      - name: Commit and Push Version Changes
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          git add core/etc/web/data/version.json
-          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add core/etc/web/data/version.json version.txt
+
           if ! git diff --quiet --staged; then
-            git commit -m "Web: Sync version to $(cat version.txt | cut -s -d',' -f1)"
-            git push origin HEAD:${{ github.ref_name }}
+            git commit -m "Web: Sync version to $(cat version.txt | cut -d',' -f1)"
+            git push origin HEAD
           else
-            echo "No changes to commit"
+            echo "No changes detected."
           fi
