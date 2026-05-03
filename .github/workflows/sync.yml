@@ -20,11 +20,6 @@ jobs:
           rm -rf core_temp
           chmod +x *.sh scripts/*.sh 2>/dev/null || true
 
-      - name: LS
-        run: |
-          echo "Listing files:"
-          ls -a
-
       - name: Generate Version JSON
         run: |
           if [ -f "gen_version.sh" ]; then
