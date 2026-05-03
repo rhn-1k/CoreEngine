@@ -1,0 +1,76 @@
+name: Build ROM
+
+on:
+  workflow_dispatch:
+    inputs:
+      DOWNLOAD_METHOD:
+        required: true
+        type: choice
+        options:
+          - "samloader"
+          - "direct_link"
+          - "google_drive"
+        default: "samloader"
+      UPLOAD_METHOD:
+        required: true
+        type: choice
+        options:
+          - "github"
+          - "gdrive"
+        default: "gdrive"
+      TELEGRAM_DESTINATION:
+        required: true
+        type: choice
+        options:
+          - "private"
+          - "public"
+          - "silent"
+        default: "private"
+      UI_TYPE:
+        required: true
+        type: choice
+        options:
+          - "slim"
+          - "full"
+        default: "slim"
+      TARGET_DEVICE_MODEL:
+        required: true
+        default: "SM-A156E"
+      BASE_DEVICE_MODEL:
+        required: true
+        default: "SM-A156M"
+
+jobs:
+  simulate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        run: |
+          mkdir -p OUT
+          echo "1.0, 6.1, 14" > version.txt
+          touch OUT/test_file.img
+
+      - name: Run Simulation
+        run: |
+          OUT_DIR="OUT"
+          VERSION=$(cat version.txt | tr -d '\r' | cut -d',' -f1 | xargs)
+          TARGET="${{ github.event.inputs.TARGET_DEVICE_MODEL }}"
+          ZIP_NAME="CoreProject_V${VERSION}_${TARGET}.7z"
+          ZIP_PATH="$OUT_DIR/$ZIP_NAME"
+          
+          if [[ "$TARGET" == *"A156"* ]]; then
+            NET_TYPE="5g"
+          else
+            NET_TYPE="4g"
+          fi
+
+          echo "Command Result:"
+          echo "bash upload.sh \"$ZIP_PATH\" \"${{ github.event.inputs.TELEGRAM_DESTINATION }}\" \"${{ github.event.inputs.UI_TYPE }}\" \"$NET_TYPE\""
+          
+          echo "Arg 1: $ZIP_PATH"
+          echo "Arg 2: ${{ github.event.inputs.TELEGRAM_DESTINATION }}"
+          echo "Arg 3: ${{ github.event.inputs.UI_TYPE }}"
+          echo "Arg 4: $NET_TYPE"
