@@ -29,6 +29,15 @@ on:
           - "public"
           - "silent"
         default: "private"
+      UI_TYPE:
+        description: "CoreU type"
+        required: true
+        type: choice
+        options:
+          - "slim"
+          - "full"
+        default: "slim"
+
       FIRMWARE_DIRECT_LINK:
         description: "Direct firmware link or Google Drive FILE_ID (only google_drive, direct_link)"
         required: false
@@ -158,11 +167,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
 
-      - name: Compress and Upload to Google Drive
+       - name: Compress and Upload to Google Drive
         if: github.event.inputs.UPLOAD_METHOD == 'gdrive'
         run: |
           OUT_DIR="OUT"
-          VERSION=$(cat version.txt | tr -d '[:space:]')
+          VERSION=$(cat version.txt | cut -d',' -f1 | tr -d '[:space:]')
           ZIP_NAME="CoreProject_V${VERSION}_${{ github.event.inputs.TARGET_DEVICE_MODEL }}.7z"
           ZIP_PATH="$OUT_DIR/$ZIP_NAME"
 
@@ -172,6 +181,17 @@ jobs:
               sudo xz -9 -T0 "$img"
             done
           fi
+
           cp core/etc/read.txt "$OUT_DIR"
           7z a -t7z "$ZIP_PATH" ./"$OUT_DIR"/* -mx=1
-          bash upload.sh "$ZIP_PATH" "${{ github.event.inputs.TELEGRAM_DESTINATION }}"
+
+          bash upload.sh "$ZIP_PATH" "${{ github.event.inputs.TELEGRAM_DESTINATION }}" "${{ github.event.inputs.UI_TYPE }}"
+
+      - name: Commit and Push changes
+        if: github.event.inputs.UPLOAD_METHOD == 'gdrive' && github.event.inputs.TELEGRAM_DESTINATION == 'public'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add core/etc/web/data/version.json
+          git add core/etc/web/index.html
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Web: Update to V$(cat version.txt | cut -d',' -f1)" && git push)
