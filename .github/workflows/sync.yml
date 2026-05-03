@@ -1,0 +1,53 @@
+name: Sync Version to Web
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'version.txt'
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Fetch CoreEngine Source
+        run: |
+          git clone https://${{ secrets.GIT_TOKEN }}@github.com/rhn-1k/Coreproject.git core_temp
+          cp -r core_temp/* .
+          rm -rf core_temp
+          chmod +x *.sh scripts/*.sh 2>/dev/null || true
+      - name: Generate Version JSON
+        run: |
+          VERSION_FILE="version.txt"
+          JSON_OUT="core/etc/web/data/version.json"
+          
+          if [ ! -f "$VERSION_FILE" ]; then
+              echo "ERROR: version.txt not found."
+              exit 1
+          fi
+
+          IFS=',' read -r V_CORE V_ONE V_ANDROID < "$VERSION_FILE"
+          
+          V_CORE=$(echo $V_CORE | xargs)
+          V_ONE=$(echo $V_ONE | xargs)
+          V_ANDROID=$(echo $V_ANDROID | xargs)
+
+          mkdir -p "$(dirname "$JSON_OUT")"
+
+          cat <<EOF > "$JSON_OUT"
+          {
+            "core": "$V_CORE",
+            "oneui": "$V_ONE",
+            "android": "$V_ANDROID"
+          }
+          EOF
+
+      - name: Commit and Push Version Changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add core/etc/web/data/version.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Web: Sync version to $(cat version.txt | cut -d',' -f1)" && git push)
