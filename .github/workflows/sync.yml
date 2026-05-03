@@ -17,8 +17,7 @@ jobs:
         run: |
           git clone https://${{ secrets.GIT_TOKEN }}@github.com/rhn-1k/Coreproject.git core_priv
           cd core_priv
-          chmod +x gen_version.sh
-          bash gen_version.sh
+          bash scripts/gen_version.sh
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
