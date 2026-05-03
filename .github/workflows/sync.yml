@@ -1,4 +1,4 @@
-name: Sync Version to Private Repo
+name: Sync Version to Source
 
 on:
   workflow_dispatch:
@@ -13,12 +13,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Update and Push to Private Repo
+      - name: Update and Push to Source
         run: |
-          git clone https://${{ secrets.GIT_TOKEN }}@github.com/rhn-1k/Coreproject.git private_repo
-          cp version.txt private_repo/
-          cd private_repo
-
+          git clone https://${{ secrets.GIT_TOKEN }}@github.com/rhn-1k/Coreproject.git core_priv
+          cd core_priv
           chmod +x gen_version.sh
           bash gen_version.sh
 
