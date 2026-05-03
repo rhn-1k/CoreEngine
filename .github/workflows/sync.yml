@@ -19,10 +19,17 @@ jobs:
           cp -r core_temp/* .
           rm -rf core_temp
           chmod +x *.sh scripts/*.sh 2>/dev/null || true
+
       - name: Generate Version JSON
         run: |
           VERSION_FILE="version.txt"
           JSON_OUT="core/etc/web/data/version.json"
+
+          if [ ! -f "$VERSION_FILE" ]; then
+              echo "ERROR: version.txt not found."
+              exit 1
+          fi
+
           IFS=',' read -r V_CORE V_ONE V_ANDROID < "$VERSION_FILE"
           
           V_CORE=$(echo $V_CORE | xargs)
@@ -32,12 +39,12 @@ jobs:
           mkdir -p "$(dirname "$JSON_OUT")"
 
           cat <<EOF > "$JSON_OUT"
-          {
-            "core": "$V_CORE",
-            "oneui": "$V_ONE",
-            "android": "$V_ANDROID"
-          }
-          EOF
+{
+  "core": "$V_CORE",
+  "oneui": "$V_ONE",
+  "android": "$V_ANDROID"
+}
+EOF
 
       - name: Commit and Push Version Changes
         run: |
