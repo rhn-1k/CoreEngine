@@ -16,7 +16,8 @@ jobs:
       - name: Fetch CoreEngine Source
         run: |
           git clone https://${{ secrets.GIT_TOKEN }}@github.com/rhn-1k/Coreproject.git core_temp
-          cp -r core_temp/* .
+          rm -rf core_temp/.git
+          cp -ra core_temp/. .
           rm -rf core_temp
           chmod +x *.sh scripts/*.sh 2>/dev/null || true
 
@@ -33,5 +34,12 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
           git add core/etc/web/data/version.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Web: Sync version to $(cat version.txt | cut -d',' -f1)" && git push)
+          
+          if ! git diff --quiet --staged; then
+            git commit -m "Web: Sync version to $(cat version.txt | cut -s -d',' -f1)"
+            git push origin HEAD:${{ github.ref_name }}
+          else
+            echo "No changes to commit"
+          fi
