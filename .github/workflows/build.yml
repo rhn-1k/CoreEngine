@@ -167,7 +167,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
 
-       - name: Compress and Upload to Google Drive
+      - name: Compress and Upload to Google Drive
         if: github.event.inputs.UPLOAD_METHOD == 'gdrive'
         run: |
           OUT_DIR="OUT"
