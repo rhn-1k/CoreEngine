@@ -62,14 +62,6 @@ on:
           - "erofs"
           - "ext4"
         default: "erofs"
-      COMPRESS_IMG_TO_XZ:
-        description: "Compress IMG to XZ"
-        required: true
-        type: choice
-        options:
-          - "True"
-          - "False"
-        default: "False"
 
 jobs:
   build:
@@ -96,12 +88,10 @@ jobs:
 
       - name: Download firmware
         run: |
-          # rename to make it work with download.sh
           METHOD="${{ github.event.inputs.DOWNLOAD_METHOD }}"
           if [ "$METHOD" = "direct_link" ]; then METHOD="direct"; fi
           if [ "$METHOD" = "google_drive" ]; then METHOD="gdrive"; fi
 
-          # bash download.sh <MODEL> <METHOD> <LINK/ID/IMEI> [CSC]
           bash scripts/download.sh \
             "${{ github.event.inputs.BASE_DEVICE_MODEL }}" \
             "$METHOD" \
@@ -124,12 +114,6 @@ jobs:
           GIT_SUPPORT_SIZE=2147483647
           OUT_DIR="OUT"
           echo "BUILD_TIME=$(TZ='Asia/Dhaka' date '+%Y-%m-%d %I:%M:%S %p UTC+6')" >> $GITHUB_ENV
-          if [ "${{ github.event.inputs.COMPRESS_IMG_TO_XZ }}" = "True" ]; then
-            for img in "$OUT_DIR"/*.img; do
-              [ -f "$img" ] || continue
-              sudo xz -9 -T0 "$img"
-            done
-          fi
 
           for file in "$OUT_DIR"/*; do
             [ -f "$file" ] || continue
@@ -166,12 +150,6 @@ jobs:
           ZIP_NAME="CoreProject_V${VERSION}_${{ github.event.inputs.TARGET_DEVICE_MODEL }}.7z"
           ZIP_PATH="$OUT_DIR/$ZIP_NAME"
 
-          if [ "${{ github.event.inputs.COMPRESS_IMG_TO_XZ }}" = "True" ]; then
-            for img in "$OUT_DIR"/*.img; do
-              [ -f "$img" ] || continue
-              sudo xz -9 -T0 "$img"
-            done
-          fi
           cp core/etc/read.txt "$OUT_DIR"
           7z a -t7z "$ZIP_PATH" ./"$OUT_DIR"/* -mx=1
           bash upload.sh "$ZIP_PATH" "${{ github.event.inputs.TELEGRAM_DESTINATION }}"
