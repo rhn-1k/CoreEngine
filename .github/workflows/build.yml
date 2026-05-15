@@ -66,14 +66,14 @@ jobs:
           git clone https://${{ secrets.GIT_TOKEN }}@github.com/rhn-1k/Coreproject.git core_temp
           cp -r core_temp/* .
           rm -rf core_temp
-          chmod +x *.sh scripts/*.sh 2>/dev/null || true
+          chmod +x *.py scripts/*.py 2>/dev/null || true
 
       - name: Cleaning junk files
         uses: rokibhasansagar/slimhub_actions@v25.42.5
 
       - name: Setup environment
         run: |
-          bash setup.sh
+          python3 setup.py
 
       - name: Check inputs
         run: |
@@ -100,7 +100,7 @@ jobs:
 
           LINK_OR_IMEI="${{ github.event.inputs.DOWNLOAD_METHOD == 'samloader' && env.BASE_IMEI || github.event.inputs.FIRMWARE_DIRECT_LINK }}"
 
-          bash scripts/download.sh \
+          python3 scripts/download.py \
             "${{ env.BASE_MODEL }}" \
             "$METHOD" \
             "$LINK_OR_IMEI" \
@@ -108,7 +108,7 @@ jobs:
 
       - name: Start Build From ${{ github.event.inputs.BASE_DEVICE_MODEL }} To ${{ github.event.inputs.TARGET_DEVICE_MODEL }}
         run: |
-          sudo bash sixteen.sh \
+          python3 sixteen.py \
             "${{ github.event.inputs.TARGET_DEVICE_MODEL }}" \
             "${{ github.event.inputs.USE_UI_8_TETHERING_APEX }}" \
             "${{ env.BASE_MODEL }}" \
@@ -125,4 +125,4 @@ jobs:
 
           ZIP_PATH="$OUT_DIR/$ZIP_NAME"
           7z a -t7z "$ZIP_PATH" ./"$OUT_DIR"/* -mx=9
-          bash upload.sh "$ZIP_PATH" "${{ github.event.inputs.TELEGRAM_DESTINATION }}"
+          python3 upload.py "$ZIP_PATH" "${{ github.event.inputs.TELEGRAM_DESTINATION }}"
